@@ -13,7 +13,8 @@ TEST(HttpProcessTest,DoRequestTest) {
     strcpy(conn.m_buffer_read,test_packet);
     conn.m_read_idx = strlen(test_packet);
     testing::internal::CaptureStdout();
-    conn.process_read();
+    auto result = conn.process_read();
     std::string output = testing::internal::GetCapturedStdout();
-    EXPECT_EQ(output,"Get header request");
+    //EXPECT_EQ(output,"Get header request");
+    EXPECT_EQ(result,http_conn::FILE_REQUEST);
 }

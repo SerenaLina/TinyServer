@@ -1,6 +1,7 @@
 #include "http_conn.h"
-const char *doc_root = "/root/www";
+#include <mysql/mysql.h>
 
+const char *doc_root = "/root/www";
 
 void http_conn::init() {
     m_url = 0;
@@ -219,6 +220,33 @@ http_conn::HTTP_CODE http_conn::do_request(){
         // m_url_real = /CGISQL.cgi
         //m_real_file + len 指向/root/www尾部,拷贝为/root/www/CGISQL.cgi
         strncpy(m_real_file+len,m_url_real,FILENAME_LEN - len -1);
+        const char *name_start = strchr(m_string,'=');
+        const char *delim = strchr(m_string,'&');
+        // 处理账户密码
+        char name[200],password[200];
+        if(name_start && delim && delim > name_start) {
+            name_start ++;
+            size_t name_len = delim - name_start;
+            // 防止缓冲区溢出
+            if (name_len > sizeof(name)) {
+                return BAD_REQUEST;
+            }
+            strncpy(name,name_start,name_len);
+            name[name_len] = '\0';
+            // 不要查找 '='。
+            // 对于name=111&gender=male&password=1222可能会造成安全隐患
+            // const char *password_start = strchr(delim,'=');
+            const char *password_start = strstr(delim,"password=");
+            if(password_start) {
+                password_start += 9;
+                strcpy(password,password_start);
+            } else {
+                return BAD_REQUEST;
+            }
+        } else {
+            return BAD_REQUEST;
+        }
+
     }
     if(*(p+1) == '0') {
         char *m_url_real = (char *)malloc(sizeof(char) * 200);
