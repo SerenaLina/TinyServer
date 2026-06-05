@@ -10,6 +10,9 @@
 #include<unistd.h>
 #include <fcntl.h>
 #include <gtest/gtest_prod.h>
+#include "sql_connection_pool.h"
+#include "locker.h"
+#include <sys/mman.h>
 
 #define BUFFER_SIZE 1000
 #define READ_BUFFER_SIZE 1000
@@ -39,6 +42,7 @@ class http_conn {
         HTTP_CODE process_read();
         char *get_line() { return m_buffer_read+m_start_line; };
         HTTP_CODE do_request();
+        void initmysql_result();
     private:
         char *m_url;
         char *m_version;
@@ -50,6 +54,8 @@ class http_conn {
         char *m_host;
         int m_read_idx;
         int m_checked_length;
+        struct stat m_file_stat; //文件信息
+        char *m_file_address; //文件在内存空间的地址
         char *m_string;
         int m_start_line;
         int cgi;
@@ -60,6 +66,7 @@ class http_conn {
     FRIEND_TEST(HttpContentParserTest,ParseContent);
     FRIEND_TEST(HttpProcessTest,DoRequestTest);
     FRIEND_TEST(HttpHeaderParserTest,ParseRequestLine);
+    FRIEND_TEST(HttpProcessTest,FileRequestTest);
 };
 
 #endif

@@ -11,13 +11,13 @@ FetchContent_Declare(
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(googletest)
-add_executable(parser_test test/parser_test.cpp http_conn.cpp)
-add_executable(process_test test/process_test.cpp http_conn.cpp)
+add_executable(parser_test test/parser_test.cpp http_conn.cpp sql_connection_pool.cpp)
+add_executable(process_test test/process_test.cpp http_conn.cpp sql_connection_pool.cpp)
 add_executable(connection_pool_test test/database_conn_test.cpp sql_connection_pool.cpp)
 
 target_link_libraries(TinyWebServer gtest mysqlclient Threads::Threads)
-target_link_libraries(parser_test gtest_main)
-target_link_libraries(process_test gtest_main)
+target_link_libraries(parser_test gtest_main mysqlclient Threads::Threads)
+target_link_libraries(process_test gtest_main mysqlclient Threads::Threads)
 target_link_libraries(connection_pool_test gtest_main mysqlclient Threads::Threads)
 include(CTest)
 enable_testing()

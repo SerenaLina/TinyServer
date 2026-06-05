@@ -58,3 +58,44 @@ connection_pool * connection_pool::GET_INSTANCE(int MaxConn,string user,string p
             }
             return connPool;
 }
+
+bool connection_pool::RELEASE_CONNECTION(MYSQL* conn) {
+    pthread_mutex_lock(&lock);
+    if(conn != NULL) {
+        connList.push_back(conn);
+        ++freeConn;
+        --currConn;
+        pthread_mutex_unlock(&lock);
+        return true;
+    }
+    return false;
+}
+
+void connection_pool::DESTROY_POOL()
+{
+	pthread_mutex_lock(&lock);
+	if(connList.size() > 0)
+	{
+		list<MYSQL *>::iterator it;
+		for(it = connList.begin(); it != connList.end(); ++it)
+		{
+			MYSQL * con = *it;
+			mysql_close(con);
+		}
+	    currConn = 0;
+		freeConn = 0;
+		connList.clear();
+	}
+}
+
+int connection_pool::GET_FREE_CONN()
+{
+	return this->freeConn;
+}
+
+
+connection_pool::~connection_pool()
+{
+	DESTROY_POOL();
+}
+
