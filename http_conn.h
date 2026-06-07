@@ -7,19 +7,23 @@
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/epoll.h>
 #include<unistd.h>
 #include <fcntl.h>
 #include <gtest/gtest_prod.h>
 #include "sql_connection_pool.h"
 #include "locker.h"
 #include <sys/mman.h>
+#include <sys/uio.h>
 
 #define BUFFER_SIZE 1000
 #define READ_BUFFER_SIZE 1000
+#define WRITE_BUFFER_SIZE 1000
 
 class http_conn {
     private:
         char m_buffer_read[READ_BUFFER_SIZE];
+        char m_buffer_write[WRITE_BUFFER_SIZE];
         int  m_connfd;
     public:
         static const int FILENAME_LEN = 200;
@@ -30,19 +34,34 @@ class http_conn {
     public:
         bool read_once();
         void init();
+        void close_conn(bool real_close = true);
+        void process();
+        bool write();
 
     // test interface
     public:
         void run_parse_test();
+
     private:
         LINE_STATUS parse_line();
         HTTP_CODE parse_request_line(char *text);
         HTTP_CODE parse_header(char *text);
         HTTP_CODE parse_content(char *text);
         HTTP_CODE process_read();
+        bool process_write(HTTP_CODE ret);
         char *get_line() { return m_buffer_read+m_start_line; };
         HTTP_CODE do_request();
         void initmysql_result();
+        bool write();
+
+        bool add_response(const char* format,...);
+        bool add_status_line(int status,const char* title);
+        bool add_headers(int content_len);
+        bool add_content_length(int content_len);
+        bool add_blank_line();
+        bool add_linger();
+        bool add_content(const char* content);
+        void unmap();
     private:
         char *m_url;
         char *m_version;
@@ -53,11 +72,16 @@ class http_conn {
         int m_content_length;
         char *m_host;
         int m_read_idx;
+        int m_write_idx;
         int m_checked_length;
         struct stat m_file_stat; //文件信息
         char *m_file_address; //文件在内存空间的地址
         char *m_string;
         int m_start_line;
+        static int m_epoll_fd;
+        static int m_user_count;
+        struct iovec m_iv[2];
+        int m_iv_count;
         int cgi;
 
     FRIEND_TEST(HttpHeaderParserTest, ParseConnectionKeepAlive);
@@ -67,6 +91,7 @@ class http_conn {
     FRIEND_TEST(HttpProcessTest,DoRequestTest);
     FRIEND_TEST(HttpHeaderParserTest,ParseRequestLine);
     FRIEND_TEST(HttpProcessTest,FileRequestTest);
+    FRIEND_TEST(HttpProcessTest,WriteResponseTest);
 };
 
 #endif

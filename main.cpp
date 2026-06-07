@@ -8,6 +8,7 @@
 
 #include "http_conn.h"
 #define MAX_EVENT_NUMBER 100
+#define MAX_USER_NUMBER 100
 
 struct client_data {
     sockaddr_in address;
@@ -27,7 +28,7 @@ int main(int argc,char *argv[]) {
        printf("usage: %s ip_address port_number\n",basename(argv[0]));
        return 1;
     }
-    http_conn user;
+    http_conn user[MAX_USER_NUMBER];
     // user.run_parse_test();
     int port=atoi(argv[1]);
     // 通信端点
@@ -76,7 +77,7 @@ int main(int argc,char *argv[]) {
             } 
             // 处理数据
             else if(events[i].events & EPOLLIN) {
-                if(user.read_once()) {
+                if(user[sockfd].read_once()) {
                     printf("Ready to read user data\n");
                 }
             }

@@ -34,3 +34,19 @@ TEST(HttpProcessTest,FileRequestTest) {
     auto result = conn.process_read();
     EXPECT_STREQ(conn.m_url,"/logError.html");
 }
+
+TEST(HttpProcessTest,WriteResponseTest) {
+    http_conn conn;
+    const char* test_packet = 
+        "GET /index.html HTTP/1.1\r\n"
+        "Host: localhost:9006\r\n"
+        "Content-length:13\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+        const char* expect_packet = "HTTP/1.1 404 Not Found\r\n"
+                "Content-Length: 50\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "The requested file was not found on this server.\n";
+    
+}
