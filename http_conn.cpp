@@ -177,6 +177,7 @@ http_conn::HTTP_CODE http_conn::parse_header(char *text) {
             m_check_state = CHECK_STATE_CONTENT;
             return NO_REQUEST;
         }
+        return GET_REQUEST;
     }
     if(strncasecmp(text,"Connection:",11) == 0) {
         text += 11;
@@ -316,6 +317,7 @@ bool http_conn::add_response(const char* format,...) {
         return false;
     m_write_idx+=len;
     va_end(arg_list);
+    return true;
 }
 
 bool http_conn::add_status_line(int status,const char* title)
@@ -329,6 +331,7 @@ bool http_conn::add_headers(int content_len)
     add_content_length(content_len);
     add_linger();
     add_blank_line();
+    return true;
 }
 
 bool http_conn::add_content_length(int content_len)

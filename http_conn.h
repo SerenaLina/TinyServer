@@ -52,7 +52,6 @@ class http_conn {
         char *get_line() { return m_buffer_read+m_start_line; };
         HTTP_CODE do_request();
         void initmysql_result();
-        bool write();
 
         bool add_response(const char* format,...);
         bool add_status_line(int status,const char* title);
