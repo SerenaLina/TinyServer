@@ -23,6 +23,13 @@ void addfd_(int epoll_fd,int fd) {
     epoll_ctl(epoll_fd,EPOLL_CTL_ADD,fd,&event);
 }
 
+//对文件描述符设置非阻塞
+void setnonblocking(int fd){
+    int old_option=fcntl(fd,F_GETFL);
+    int new_option=old_option | O_NONBLOCK;
+    fcntl(fd,F_SETFL,new_option);
+}
+
 int main(int argc,char *argv[]) {
     if(argc <= 1) {
        printf("usage: %s ip_address port_number\n",basename(argv[0]));
@@ -71,14 +78,27 @@ int main(int argc,char *argv[]) {
                 socklen_t clientsock_len = sizeof(client_address);
                 int connfd = accept(sockfd,(struct sockaddr*)&client_address
                 ,&clientsock_len);
-
+                user[connfd].connect_socket(connfd);
+                user[connfd].init();
                 addfd_(epollfd,connfd);
+                setnonblocking(connfd);
                 
             } 
             // 处理数据
             else if(events[i].events & EPOLLIN) {
                 if(user[sockfd].read_once()) {
                     printf("Ready to read user data\n");
+                    user[sockfd].process();
+                    if(!user[sockfd].write()) {
+                        user[sockfd].close_conn();
+                        printf("Write response failed!");
+                        exit(1);
+                    }
+                }
+            }
+            else if(events[i].events & EPOLLOUT) {
+                if(!user[sockfd].write()) {
+                    user[sockfd].close_conn();
                 }
             }
         }

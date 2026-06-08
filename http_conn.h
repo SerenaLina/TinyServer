@@ -32,6 +32,7 @@ class http_conn {
         enum HTTP_CODE{NO_REQUEST,GET_REQUEST,BAD_REQUEST,NO_RESOURCE,FORBIDDEN_REQUEST,FILE_REQUEST,INTERNAL_ERROR,CLOSED_CONNECTION};
         enum LINE_STATUS{LINE_OK=0,LINE_BAD,LINE_OPEN};
     public:
+        void connect_socket(int connfd);
         bool read_once();
         void init();
         void close_conn(bool real_close = true);
