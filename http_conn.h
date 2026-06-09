@@ -17,8 +17,8 @@
 #include <sys/uio.h>
 
 #define BUFFER_SIZE 1000
-#define READ_BUFFER_SIZE 1000
-#define WRITE_BUFFER_SIZE 1000
+#define READ_BUFFER_SIZE 40960
+#define WRITE_BUFFER_SIZE 40960
 
 class http_conn {
     private:
