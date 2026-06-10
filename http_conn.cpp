@@ -19,6 +19,23 @@ map<string,string> users;
 
 int http_conn::m_epoll_fd = -1;
 int http_conn::m_user_count=0;
+int setnonblocking(int fd){
+    int old_option=fcntl(fd,F_GETFL);
+    int new_option=old_option | O_NONBLOCK;
+    fcntl(fd,F_SETFL,new_option);
+    return old_option;
+}
+
+void addfd(int epollfd,int fd,bool one_shot)
+{
+    epoll_event event;
+    event.data.fd=fd;
+    event.events=EPOLLIN|EPOLLET|EPOLLRDHUP;
+    if(one_shot)
+        event.events|=EPOLLONESHOT;
+    epoll_ctl(epollfd,EPOLL_CTL_ADD,fd,&event);
+    setnonblocking(fd);
+}
 
 void http_conn::connect_socket(int connfd) {
     m_connfd = connfd;
@@ -105,12 +122,15 @@ void http_conn::init() {
     memset(m_buffer_write, 0, WRITE_BUFFER_SIZE);
 }
 
-void http_conn::run_parse_test() {
-    char request_line1[] = "GET\t/\tHTTP/1.1";
-    char request_line2[] = "BAD\tDATA";
-    assert(parse_request_line(request_line1) == NO_REQUEST);
-    assert(parse_request_line(request_line2) == BAD_REQUEST);
-    printf("TEST PASS");
+void http_conn::init(int sockfd,const sockaddr_in& addr)
+{
+    m_connfd=sockfd;
+    m_address=addr;
+    //int reuse=1;
+    //setsockopt(m_sockfd,SOL_SOCKET,SO_REUSEADDR,&reuse,sizeof(reuse));
+    addfd(m_epoll_fd,sockfd,true);
+    m_user_count++;
+    init();
 }
 
 

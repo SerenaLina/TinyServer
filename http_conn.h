@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <cassert>
 #include <sys/socket.h>
+#include<netinet/in.h>
+#include<arpa/inet.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/epoll.h>
@@ -34,16 +36,17 @@ class http_conn {
     public:
         void connect_socket(int connfd);
         bool read_once();
-        void init();
         void close_conn(bool real_close = true);
         void process();
         bool write();
-
+        void init(int sockfd,const sockaddr_in &addr);
     // test interface
     public:
-        void run_parse_test();
+        static int m_epoll_fd;
+        static int m_user_count;
 
     private:
+        void init();
         LINE_STATUS parse_line();
         HTTP_CODE parse_request_line(char *text);
         HTTP_CODE parse_header(char *text);
@@ -66,6 +69,7 @@ class http_conn {
         char *m_url;
         char *m_version;
         char m_real_file[FILENAME_LEN];
+        sockaddr_in m_address;
         METHOD m_method;
         CHECK_STATE m_check_state;
         bool m_linger;
@@ -78,8 +82,6 @@ class http_conn {
         char *m_file_address; //文件在内存空间的地址
         char *m_string;
         int m_start_line;
-        static int m_epoll_fd;
-        static int m_user_count;
         struct iovec m_iv[2];
         int m_iv_count;
         int cgi;

@@ -7,8 +7,11 @@
 #include <cstring>
 
 #include "http_conn.h"
+#include "threadpool.h"
 #define MAX_EVENT_NUMBER 100
 #define MAX_USER_NUMBER 100
+extern int setnonblocking( int fd );
+
 
 struct client_data {
     sockaddr_in address;
@@ -16,19 +19,18 @@ struct client_data {
     int sockfd;
 };
 
-void addfd_(int epoll_fd,int fd) {
+void addfd_(int epoll_fd,int fd,bool one_shot) {
     epoll_event event;
     event.data.fd = fd;
-    event.events = EPOLLIN;
+    event.events = EPOLLIN | EPOLLRDHUP;
+    if (one_shot)
+    {
+        event.events |= EPOLLONESHOT;
+    }
+    
     epoll_ctl(epoll_fd,EPOLL_CTL_ADD,fd,&event);
 }
 
-//对文件描述符设置非阻塞
-void setnonblocking(int fd){
-    int old_option=fcntl(fd,F_GETFL);
-    int new_option=old_option | O_NONBLOCK;
-    fcntl(fd,F_SETFL,new_option);
-}
 
 int main(int argc,char *argv[]) {
     if(argc <= 1) {
@@ -60,7 +62,18 @@ int main(int argc,char *argv[]) {
     epoll_event events[MAX_EVENT_NUMBER];
     int epollfd = epoll_create(5);
     assert(epollfd!=-1);
-    addfd_(epollfd,listenfd);
+    addfd_(epollfd,listenfd,false);
+    http_conn::m_epoll_fd=epollfd;
+
+
+    threadpool<http_conn>* pool=NULL;
+    try
+    {
+        pool=new threadpool<http_conn>;
+    }
+    catch(...){
+        return 1;
+    }
 
     while (1) {
         // epoll_wait会将就绪的事件放到events数组中，并返回数目
@@ -79,8 +92,7 @@ int main(int argc,char *argv[]) {
                 int connfd = accept(sockfd,(struct sockaddr*)&client_address
                 ,&clientsock_len);
                 user[connfd].connect_socket(connfd);
-                user[connfd].init();
-                addfd_(epollfd,connfd);
+                user[connfd].init(connfd,client_address);
                 setnonblocking(connfd);
                 
             } 
@@ -88,12 +100,7 @@ int main(int argc,char *argv[]) {
             else if(events[i].events & EPOLLIN) {
                 if(user[sockfd].read_once()) {
                     printf("Ready to read user data\n");
-                    user[sockfd].process();
-                    if(!user[sockfd].write()) {
-                        user[sockfd].close_conn();
-                        printf("Write response failed!");
-                        exit(1);
-                    }
+                    pool -> append(user + sockfd);
                 }
             }
             else if(events[i].events & EPOLLOUT) {
@@ -106,5 +113,7 @@ int main(int argc,char *argv[]) {
     
     close(epollfd);
     close(listenfd);
+    delete [] user;
+    delete pool;
     return 0;
 }
